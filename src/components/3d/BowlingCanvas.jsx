@@ -19,7 +19,8 @@ export default function BowlingCanvas({
   curveSpin = 0,
   onUpdateBallAim,
   players = [],
-  activePlayerIndex = 0
+  activePlayerIndex = 0,
+  activePlayerName = ''
 }) {
   const containerRef = useRef(null);
   const sceneRef = useRef(null);
@@ -288,6 +289,7 @@ export default function BowlingCanvas({
         isMyTurn={isMyTurn}
         dragProgress={dragProgress}
         isPointerDown={isPointerDown}
+        activePlayerName={activePlayerName}
       />
     </div>
   );

@@ -229,9 +229,11 @@ export default function App() {
   // Current active player object
   const activePlayer = players[activePlayerIndex] || null;
   const isMyTurn = activePlayer
-    ? (gameMode === GAME_MODES.SOLO || gameMode === GAME_MODES.PASS_AND_PLAY || gameMode === GAME_MODES.VS_BOT)
-      ? !activePlayer.isBot
-      : (activePlayer.id === myPlayerId || (isHost && activePlayerIndex === 0) || !activePlayer.isBot)
+    ? (gameMode === GAME_MODES.ONLINE_MULTIPLAYER)
+      ? (activePlayer.isBot ? isHost : activePlayer.id === myPlayerId)
+      : (gameMode === GAME_MODES.VS_BOT)
+        ? !activePlayer.isBot
+        : true
     : false;
 
   // --- Bot AI Turn Loop ---
@@ -665,6 +667,7 @@ export default function App() {
           }}
           players={players}
           activePlayerIndex={activePlayerIndex}
+          activePlayerName={activePlayer ? activePlayer.name : ''}
         />
       )}
 

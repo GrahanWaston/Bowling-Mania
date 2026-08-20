@@ -1,11 +1,11 @@
 import React from 'react';
 import { MoveHorizontal, ArrowUp, Flame, Zap } from 'lucide-react';
 
-export default function ControlsGuide({ isAiming, dragProgress = 0, isMyTurn = true }) {
+export default function ControlsGuide({ isAiming, dragProgress = 0, isMyTurn = true, activePlayerName = '' }) {
   if (!isMyTurn) {
     return (
       <div className="spectate-guide-pill">
-        <span className="animate-pulse">👀 Menunggu giliran lawan melempar...</span>
+        <span className="animate-pulse">👀 Giliran {activePlayerName || 'Pemain Lain'} melempar... Tunggu ya 🎳</span>
       </div>
     );
   }
