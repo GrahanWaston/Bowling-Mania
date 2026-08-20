@@ -155,13 +155,17 @@ export default function App() {
   isHostRef.current = isHost;
   const maxRoomSlotsRef = useRef(maxRoomSlots);
   maxRoomSlotsRef.current = maxRoomSlots;
+  const gameStateRef = useRef(gameState);
+  gameStateRef.current = gameState;
+  const roomCodeRef = useRef(roomCode);
+  roomCodeRef.current = roomCode;
 
   // Initialize Network Manager Listeners
   useEffect(() => {
     networkManager.init({ id: myPlayerId, name: playerName, avatar: playerAvatar, style: characterStyle });
 
     networkManager.on('JOIN_REQUEST', (payload) => {
-      if (isHostRef.current && payload.player) {
+      if (isHostRef.current && payload.player && gameStateRef.current !== GAME_STATES.LOBBY) {
         setPlayers((prev) => {
           if (prev.length >= maxRoomSlotsRef.current) return prev;
           if (prev.some(p => p.id === payload.player.id)) {
@@ -184,13 +188,29 @@ export default function App() {
     });
 
     networkManager.on('ROOM_PLAYERS_SYNC', (payload) => {
+      if (gameStateRef.current === GAME_STATES.LOBBY) return; // Do not pull player back if they left to menu
       if (payload.players) {
         setPlayers(payload.players);
-        setGameState(GAME_STATES.ROOM_WAITING);
+        if (gameStateRef.current === GAME_STATES.ROOM_WAITING) {
+          setGameState(GAME_STATES.ROOM_WAITING);
+        }
+      }
+    });
+
+    networkManager.on('PLAYER_LEFT', (payload) => {
+      if (payload.playerId) {
+        setPlayers((prev) => {
+          const filtered = prev.filter(p => p.id !== payload.playerId);
+          if (isHostRef.current && filtered.length > 0) {
+            networkManager.broadcast('ROOM_PLAYERS_SYNC', { players: filtered });
+          }
+          return filtered;
+        });
       }
     });
 
     networkManager.on('START_MATCH_BROADCAST', (payload) => {
+      if (gameStateRef.current === GAME_STATES.LOBBY) return; // Ignore if in menu
       if (payload.players) {
         setPlayers(payload.players);
       }
@@ -200,6 +220,7 @@ export default function App() {
     });
 
     networkManager.on('THROW_BROADCAST', (payload) => {
+      if (gameStateRef.current === GAME_STATES.LOBBY) return;
       if (window.__executeExternalThrow) {
         window.__executeExternalThrow(payload.power, payload.angle, payload.spin, payload.startX);
       }
@@ -207,14 +228,17 @@ export default function App() {
     });
 
     networkManager.on('ROLL_RESULT_BROADCAST', (payload) => {
+      if (gameStateRef.current === GAME_STATES.LOBBY) return;
       handleRemoteRollResult(payload);
     });
 
     networkManager.on('AIM_UPDATE', (payload) => {
+      if (gameStateRef.current === GAME_STATES.LOBBY) return;
       setBallAimPos(payload.ballX);
     });
 
     networkManager.on('TAUNT_EMOTE', (payload) => {
+      if (gameStateRef.current === GAME_STATES.LOBBY) return;
       triggerFloatingEmoji(payload.emoji, payload.senderName);
       if (payload.sound) {
         soundEngine.playCupuSound(payload.sound);
@@ -222,6 +246,7 @@ export default function App() {
     });
 
     networkManager.on('CHAT_MESSAGE', (payload) => {
+      if (gameStateRef.current === GAME_STATES.LOBBY) return;
       setChatMessages((prev) => [...prev, payload]);
     });
   }, [playerName, playerAvatar, characterStyle]);
@@ -371,9 +396,11 @@ export default function App() {
 
   const handleBackToMenu = () => {
     if (rollTimeoutRef.current) clearTimeout(rollTimeoutRef.current);
-    if (networkManager.currentRoom) {
-      networkManager.leaveRoom();
-    }
+    networkManager.leaveRoom();
+    setRoomCode('');
+    setRoomName('');
+    setIsHost(false);
+    setGameMode(GAME_MODES.SOLO);
     setGameState(GAME_STATES.LOBBY);
     setShowExitConfirm(false);
     setShowCelebration(false);
@@ -381,6 +408,8 @@ export default function App() {
     setPlayers([]);
     setActivePlayerIndex(0);
     soundEngine.stopDiscoMusic();
+    sessionStorage.removeItem('bowling_active_session');
+    window.history.replaceState(null, '', window.location.pathname);
   };
 
   const handleRematch = () => {

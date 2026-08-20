@@ -306,6 +306,14 @@ export class NetworkManager {
   }
 
   leaveRoom() {
+    if (this.roomCode) {
+      try {
+        this.broadcast('PLAYER_LEFT', {
+          playerId: this.localPlayer?.id || this.myPeerId,
+          playerName: this.localPlayer?.name || 'Player'
+        });
+      } catch (e) {}
+    }
     this.roomCode = null;
     this.isHost = false;
     if (this._announceInterval) {
