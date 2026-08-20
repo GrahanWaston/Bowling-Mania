@@ -378,7 +378,7 @@ export default function App() {
     setShowCupuAlert(false);
     setPlayers([]);
     setActivePlayerIndex(0);
-    soundEngine.stopDiscoFunk();
+    soundEngine.stopDiscoMusic();
   };
 
   const handleRematch = () => {
