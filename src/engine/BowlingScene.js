@@ -800,33 +800,15 @@ export class BowlingScene {
   }
 
   _buildAimGuide() {
-    const dotGeo = new THREE.SphereGeometry(0.024, 12, 12);
-    const dotMat = new THREE.MeshBasicMaterial({ color: 0x00f5ff });
-
-    for (let i = 0; i < 14; i++) {
-      const dot = new THREE.Mesh(dotGeo, dotMat);
-      dot.position.set(0, 0.03, i * 0.5);
-      this.scene.add(dot);
-      this.aimDots.push(dot);
-    }
+    this.aimDots = [];
   }
 
   updateAimGuide(ballX, angle, curveSpin) {
-    if (!this.aimDots || this.aimDots.length === 0) return;
-
-    this.aimDots.forEach((dot, idx) => {
-      const dist = (idx + 1) * 0.45;
-      const angleOffset = Math.sin(angle) * dist;
-      const curveOffset = (curveSpin * (dist * dist) * 0.015);
-      const dotX = ballX + angleOffset + curveOffset;
-
-      dot.position.set(dotX, 0.025, -1.0 + dist);
-      dot.visible = (this.cameraMode === 'APPROACH' && !this.isBallInFlight);
-    });
+    // Aim guide line removed for clean, authentic bowling lane visuals
   }
 
   hideAimGuide() {
-    this.aimDots.forEach(d => { d.visible = false; });
+    // No-op
   }
 
   _buildSparks() {

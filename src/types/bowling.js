@@ -111,7 +111,7 @@ export const QUICK_CHAT_PRESETS = [
   "Gutter lagi nih bentar lagi wkwk"
 ];
 
-export const PIN_SPACING = 0.31;
+export const PIN_SPACING = 0.305;
 export const PIN_POSITIONS = [
   // Row 1 (Pin 1 - Headpin)
   { id: 1, x: 0, z: 0 },
@@ -136,9 +136,9 @@ export const LANE_CONFIG = {
   GUTTER_WIDTH: 0.23,
   PIN_DECK_Z: 18.28,
   BALL_RADIUS: 0.108,
-  BALL_MASS: 6.5,
+  BALL_MASS: 6.2,
   PIN_HEIGHT: 0.38,
-  PIN_RADIUS: 0.06,
-  PIN_MASS: 1.55,
+  PIN_RADIUS: 0.058,
+  PIN_MASS: 1.62,
   MAX_PLAYERS: 10
 };

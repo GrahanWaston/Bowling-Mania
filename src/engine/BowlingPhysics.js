@@ -42,31 +42,31 @@ export class BowlingPhysics {
   }
 
   _setupContactMaterials() {
-    // Ball on Lane (slick lane with moderate friction for curve/spin)
+    // Ball on Lane (slick oiled lane with realistic traction)
     const ballLaneContact = new CANNON.ContactMaterial(this.ballMaterial, this.laneMaterial, {
-      friction: 0.18,
-      restitution: 0.08
+      friction: 0.16,
+      restitution: 0.05
     });
     this.world.addContactMaterial(ballLaneContact);
 
-    // Ball on Pin (realistic energy absorption & pin deflection)
+    // Ball on Pin (authentic energy absorption & lateral deflection)
     const ballPinContact = new CANNON.ContactMaterial(this.ballMaterial, this.pinMaterial, {
-      friction: 0.35,
-      restitution: 0.28
+      friction: 0.48,
+      restitution: 0.20
     });
     this.world.addContactMaterial(ballPinContact);
 
-    // Pin on Pin (absorbed collision, preventing unrealistic ping-pong explosions)
+    // Pin on Pin (absorbed kinetic energy, preventing excessive domino explosions)
     const pinPinContact = new CANNON.ContactMaterial(this.pinMaterial, this.pinMaterial, {
-      friction: 0.40,
-      restitution: 0.24
+      friction: 0.38,
+      restitution: 0.20
     });
     this.world.addContactMaterial(pinPinContact);
 
-    // Pin on Floor (firm friction to hold standing pins)
+    // Pin on Floor (firm friction to keep corner pins standing on weak hits)
     const pinLaneContact = new CANNON.ContactMaterial(this.pinMaterial, this.laneMaterial, {
-      friction: 0.55,
-      restitution: 0.15
+      friction: 0.68,
+      restitution: 0.08
     });
     this.world.addContactMaterial(pinLaneContact);
   }
@@ -180,19 +180,35 @@ export class BowlingPhysics {
     this.ballBody = new CANNON.Body({
       mass: LANE_CONFIG.BALL_MASS,
       material: this.ballMaterial,
-      linearDamping: 0.05,
-      angularDamping: 0.15
+      linearDamping: 0.06,
+      angularDamping: 0.18
     });
     this.ballBody.addShape(ballShape);
     this.resetBallPosition(0);
     this.world.addBody(this.ballBody);
 
-    // Collision listener for sound & gutter
+    // Collision listener with realistic energy transfer & deflection
     this.ballBody.addEventListener('collide', (e) => {
-      if (this.pinBodies.some(p => p.body === e.body)) {
+      const hitPinObj = this.pinBodies.find(p => p.body === e.body);
+      if (hitPinObj) {
         if (!this.hasFirstPinHit) {
           this.hasFirstPinHit = true;
         }
+
+        // Realistic energy absorption: ball forward speed drops on impact
+        this.ballBody.velocity.z *= 0.86;
+
+        // Headpin (#1) direct hit deflection physics:
+        // Hitting dead straight on the nose (|offset| < 0.02) causes deflection that drives Pin 1 into Pin 5,
+        // often leaving corner pins (e.g. Pin 7 or 10) standing unless entering with pocket curve!
+        if (hitPinObj.id === 1) {
+          const hitOffset = this.ballBody.position.x - hitPinObj.body.position.x;
+          if (Math.abs(hitOffset) < 0.025) {
+            const deflectDir = hitOffset >= 0 ? 1 : -1;
+            this.ballBody.velocity.x += deflectDir * 0.7;
+          }
+        }
+
         if (this.onPinHitCallback) {
           const relVel = e.contact.getImpactVelocityAlongNormal();
           this.onPinHitCallback(Math.abs(relVel));
@@ -235,10 +251,10 @@ export class BowlingPhysics {
     const pinRadius = LANE_CONFIG.PIN_RADIUS;
 
     PIN_POSITIONS.forEach(pos => {
-      // Compound shape: cylinder body + bottom spherical cap + top spherical neck
-      const cylinderShape = new CANNON.Cylinder(pinRadius * 0.7, pinRadius * 1.0, pinHeight * 0.7, 8);
-      const topSphere = new CANNON.Sphere(pinRadius * 0.65);
-      const baseCylinder = new CANNON.Cylinder(pinRadius * 0.95, pinRadius * 0.95, 0.05, 8);
+      // Compound shape: cylinder body + top spherical neck + base stability cylinder
+      const cylinderShape = new CANNON.Cylinder(pinRadius * 0.65, pinRadius * 1.0, pinHeight * 0.7, 8);
+      const topSphere = new CANNON.Sphere(pinRadius * 0.60);
+      const baseCylinder = new CANNON.Cylinder(pinRadius * 0.95, pinRadius * 0.95, 0.06, 8);
 
       const q = new CANNON.Quaternion();
       q.setFromAxisAngle(new CANNON.Vec3(1, 0, 0), Math.PI / 2);
@@ -246,11 +262,11 @@ export class BowlingPhysics {
       const pinBody = new CANNON.Body({
         mass: LANE_CONFIG.PIN_MASS,
         material: this.pinMaterial,
-        linearDamping: 0.22,
-        angularDamping: 0.35
+        linearDamping: 0.18,
+        angularDamping: 0.28
       });
 
-      // Assemble compound shape to keep center of gravity low
+      // Assemble compound shape to create realistic center of gravity
       pinBody.addShape(cylinderShape, new CANNON.Vec3(0, 0, 0), q);
       pinBody.addShape(topSphere, new CANNON.Vec3(0, pinHeight * 0.35, 0));
       pinBody.addShape(baseCylinder, new CANNON.Vec3(0, -pinHeight * 0.3, 0), q);
@@ -304,15 +320,15 @@ export class BowlingPhysics {
   throwBall(power, angle, spin) {
     if (!this.ballBody) return;
 
-    const clampedPower = Math.max(10, Math.min(26, power));
+    const clampedPower = Math.max(11, Math.min(24, power));
     const vx = Math.sin(angle) * clampedPower;
     const vz = Math.cos(angle) * clampedPower;
-    const vy = 0.2;
+    const vy = 0.15;
 
     this.ballBody.velocity.set(vx, vy, vz);
 
-    const spinTorque = spin * 35;
-    this.ballBody.angularVelocity.set(clampedPower / LANE_CONFIG.BALL_RADIUS, -spinTorque * 0.4, -spinTorque);
+    const spinTorque = spin * 32;
+    this.ballBody.angularVelocity.set(clampedPower / LANE_CONFIG.BALL_RADIUS, -spinTorque * 0.35, -spinTorque);
 
     this.isSimulating = true;
     this.hasGutterTriggered = false;
@@ -340,15 +356,15 @@ export class BowlingPhysics {
       const posX = Math.abs(pin.body.position.x);
       const posZ = pin.body.position.z;
 
-      // Realistic pin knockdown criteria:
-      // 1. Tilted > 42 degrees: dot < 0.74 (pin has fallen over)
-      // 2. Lying on floor: height < 0.09 (center of mass dropped flat)
-      // 3. Displaced significantly: distDisplaced > 0.32
-      // 4. Fell in gutter or back pit: posX > 0.60 || posZ > 19.3
-      const isTilted = dot < 0.74;
-      const isLyingDown = height < 0.09;
-      const isDisplaced = distDisplaced > 0.32;
-      const isInGutterOrPit = posX > 0.60 || posZ > 19.3;
+      // Accurate pin knockdown criteria matching 3D visual physics:
+      // 1. Tilted > 24 degrees: dot < 0.82 (pin has lost balance and toppled)
+      // 2. Lying on floor or resting on another fallen pin: height < 0.14
+      // 3. Displaced away from its spot: distDisplaced > 0.18
+      // 4. Fell in gutter or back pit: posX > 0.55 || posZ > 19.1
+      const isTilted = dot < 0.82;
+      const isLyingDown = height < 0.14;
+      const isDisplaced = distDisplaced > 0.18;
+      const isInGutterOrPit = posX > 0.55 || posZ > 19.1;
 
       if (isTilted || isLyingDown || isDisplaced || isInGutterOrPit) {
         this.standingPinIds.delete(pin.id);
@@ -365,7 +381,7 @@ export class BowlingPhysics {
   }
 
   /**
-   * Step physics world
+   * Step physics world with realistic 2-phase lane oil pattern
    */
   update(deltaTime) {
     if (!this.world) return;
@@ -386,13 +402,17 @@ export class BowlingPhysics {
       }
     }
 
-    // Apply continuous curve friction when ball is on lane
+    // Apply 2-Zone Oil Pattern: Skid zone (0-11m) & Dry Backend hook zone (11-18.3m)
     if (this.ballBody && this.ballBody.position.z > 0 && this.ballBody.position.z < LANE_CONFIG.PIN_DECK_Z) {
       const spinZ = this.ballBody.angularVelocity.z;
+      const bz = this.ballBody.position.z;
       if (Math.abs(spinZ) > 0.5) {
-        // As ball travels down oiled lane, dry back-end creates hook acceleration
-        const hookFactor = Math.min(1.0, this.ballBody.position.z / LANE_CONFIG.PIN_DECK_Z);
-        const lateralHookForce = spinZ * 0.08 * hookFactor;
+        let hookFactor = 0.04;
+        if (bz > 10.5) {
+          // Dry backend sharp hook progression
+          hookFactor = 0.04 + ((bz - 10.5) / (LANE_CONFIG.PIN_DECK_Z - 10.5)) * 0.20;
+        }
+        const lateralHookForce = spinZ * hookFactor;
         this.ballBody.velocity.x += lateralHookForce * dt;
       }
     }

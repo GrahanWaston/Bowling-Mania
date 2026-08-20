@@ -225,10 +225,10 @@ export default function BowlingCanvas({
     if (dy > 35) {
       isThrowTriggeredRef.current = true;
 
-      const swipeSpeed = (dy / dt) * 8.0;
-      const power = Math.max(13, Math.min(25, 12 + swipeSpeed));
-      const angle = Math.max(-0.075, Math.min(0.075, (dx / (dy + 100)) * 0.4));
-      const gestureSpin = (dx / (dy + 50)) * 1.5;
+      const swipeSpeed = (dy / dt) * 7.5;
+      const power = Math.max(12, Math.min(23, 11 + swipeSpeed));
+      const angle = Math.max(-0.085, Math.min(0.085, (dx / (dy + 80)) * 0.45));
+      const gestureSpin = (dx / (dy + 40)) * 1.4;
       const spin = Math.max(-1.0, Math.min(1.0, curveSpin + gestureSpin));
       const startX = physicsRef.current.ballBody.position.x;
 
